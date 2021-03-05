@@ -1,15 +1,8 @@
-import time
-from typing import Callable
-
 import numpy as np
-from tudatpy.io import save2txt
 from tudatpy.kernel import constants
 from tudatpy.kernel.interface import spice_interface
 from tudatpy.kernel.simulation import environment_setup
-from tudatpy.kernel.simulation import estimation_setup
 from tudatpy.kernel.simulation import propagation_setup
-from tudatpy.kernel.astro import two_body_dynamics
-from tudatpy.kernel.astro import conversion
 from matplotlib import pyplot as plt
 from collections import namedtuple
 
@@ -86,7 +79,7 @@ def get_propagation_settings(initial_state, initial_time, bodies):
     )
 
     earth_time_termination_settings = propagation_setup.propagator.time_termination(
-        initial_time + constants.JULIAN_DAY * 5,
+        initial_time + constants.JULIAN_DAY * 7.5,
         terminate_exactly_on_final_condition=False
     )
 
@@ -109,7 +102,7 @@ def get_propagation_settings(initial_state, initial_time, bodies):
     return propagator_settings
 
 
-def get_initial_state_function(initial_time: float, delta_v_func: Callable[[np.ndarray, np.ndarray, float], np.ndarray], parking_orbit_altitude: float = 1_000):
+def get_initial_state(initial_time: float, parking_orbit_altitude: float = 1_000):
     # generate bodies
     bodies = create_bodies()
     mu_earth = bodies.get_body("Earth").gravitational_parameter
@@ -139,34 +132,10 @@ def get_initial_state_function(initial_time: float, delta_v_func: Callable[[np.n
 
     initial_state = np.hstack((initial_position, total_inertial_velocity))
 
-    def get_initial_state():
-        initial_time_ = initial_state * 1
-        delta_v = delta_v_func(parking_orbit_velocity, direction_sun_earth, escape_velocity)
-        initial_time_[3:] += delta_v
+    delta_v = delta_v_func(parking_orbit_velocity, direction_sun_earth, escape_velocity)
+    initial_state[3:] += delta_v
 
-        return initial_time_, delta_v
-
-    return get_initial_state
-
-
-def delta_v_func(parking_velocity: np.ndarray, sun_earth_dir: np.ndarray, escape_velocity: float):
-    parking_velocity_dir = parking_velocity / np.linalg.norm(parking_velocity)
-
-    min_v = escape_velocity - np.linalg.norm(parking_velocity)
-    max_v = 7e3
-
-    v_magn = (np.random.random() * (max_v - min_v) + min_v)
-
-    vector_in_between = sun_earth_dir - parking_velocity_dir
-
-    delta_v_dir = parking_velocity_dir + vector_in_between * np.random.random()
-    delta_v_dir = np.random.random(3)
-    delta_v_dir[2] = 0
-    delta_v_dir /= np.linalg.norm(delta_v_dir)
-
-    delta_v = delta_v_dir * v_magn
-
-    return delta_v
+    return initial_state, delta_v
 
 
 def propagate_trajectory(propagator_settings, initial_time):
@@ -191,20 +160,35 @@ def propagate_trajectory(propagator_settings, initial_time):
     return DynamicsSim(time, state_history, dependent_variable_history, (time - initial_time) / constants.JULIAN_DAY)
 
 
+def delta_v_func(parking_velocity: np.ndarray, sun_earth_dir: np.ndarray, escape_velocity: float):
+    parking_velocity_dir = parking_velocity / np.linalg.norm(parking_velocity)
+
+    min_v = escape_velocity - np.linalg.norm(parking_velocity)
+    max_v = 7e3
+
+    delta_v_magn = (np.random.random() * (max_v - min_v) + min_v)
+
+    vector_in_between = sun_earth_dir - parking_velocity_dir
+
+    delta_v_dir = parking_velocity_dir + vector_in_between * (np.random.random() * 1 + 0.25)
+    delta_v_dir += (np.random.random(3) - 0.5) * np.array([0.15, 0.15, 0.025])
+    delta_v_dir /= np.linalg.norm(delta_v_dir)
+
+    return delta_v_dir * delta_v_magn
+
+
 lines = []
 
 if __name__ == "__main__":
 
     do_plotting: bool = False
-
-    initial_time = 8304.5 * constants.JULIAN_DAY
+    initial_time = (8304.5 + - 14) * constants.JULIAN_DAY
 
     bodies = create_bodies()
-    initial_state_function = get_initial_state_function(initial_time, delta_v_func)
 
     # Create numerical integrator settings
     while True:
-        initial_state, delta_v = initial_state_function()
+        initial_state, delta_v = get_initial_state(initial_time)
 
         # Get propagator settings for perturbed/unperturbed forwards/backwards arcs
         propagator_settings = get_propagation_settings(initial_state, initial_time, bodies)
@@ -215,10 +199,13 @@ if __name__ == "__main__":
         final_distance = mars_distance[final_index]
 
         if do_plotting:
-            print(f'{final_distance / constants.ASTRONOMICAL_UNIT:.2f}AU')
+            print(f'{final_distance / constants.ASTRONOMICAL_UNIT:.2f}AU', end=' ')
 
         if final_distance > 0.3 * constants.ASTRONOMICAL_UNIT:
             continue
+
+        if do_plotting:
+            print(f'\n{final_distance / constants.ASTRONOMICAL_UNIT:.2f}AU {np.linalg.norm(delta_v)/1e3:.2f}km/s', end=' ')
 
         mars_position = propagation_result.dependent_variable_history[:, 5:7]
         mars_direction = mars_position[final_index] - mars_position[final_index - 1]
@@ -228,8 +215,6 @@ if __name__ == "__main__":
 
         if do_plotting:
 
-            print()
-            print(f'initial pos: {propagation_result.state_history[0, :3]}')
             plt.plot(*propagation_result.state_history[0, :2].T, 'x', c='b')
             plt.plot(*propagation_result.state_history[final_index, :2].T, 'x', c='r' if final_distance < 0 else 'g')
 
@@ -255,7 +240,8 @@ if __name__ == "__main__":
 
                 plt.pause(0.0001)
 
-        print(*delta_v, end=' ')
-        print(final_distance / 1e3, end=' ')
-        print(propagation_result.raw_time[final_index] - initial_time, end='\n')
+        if not do_plotting:
+            print(*delta_v, end=' ')
+            print(final_distance / 1e3, end=' ')
+            print(propagation_result.raw_time[final_index] - initial_time, end='\n')
 
