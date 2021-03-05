@@ -51,6 +51,9 @@ def do_lambert(departure_epoch: float, arrival_epoch: float, earth_parking_orbit
         initial_state[:3], final_state[:3], arrival_epoch - departure_epoch, central_body_gravitational_parameter)
 
     v1_lambert, v2_lambert = lambert_targeter.get_velocity_vectors()
-    v_earth_orbit, v_mars_orbit = get_circular_velocity("Earth", earth_parking_orbit) + np.linalg.norm(initial_state[3:]), get_circular_velocity("Mars", mars_parking_orbit) + np.linalg.norm(initial_state[3:])
+
+    v_earth_orbit = get_circular_velocity("Earth", earth_parking_orbit) + np.linalg.norm(initial_state[3:])
+    v_mars_orbit = get_circular_velocity("Mars", mars_parking_orbit) + np.linalg.norm(final_state[3:])
+
     return abs(v1_lambert - v_earth_orbit), abs(v2_lambert - v_mars_orbit)
 
