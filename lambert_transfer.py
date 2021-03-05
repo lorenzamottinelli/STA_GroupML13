@@ -108,13 +108,14 @@ if __name__ == "__main__":
         arrival_time = start_time + np.random.randint(60, 450) * constants.JULIAN_DAY
 
         kepler_ephemeris, delta_v1, delta_v2 = do_lambert(start_time, arrival_time)
-        positions = get_positions(kepler_ephemeris, start_time, arrival_time)
-
-        spacecraft_position = positions[0, :, :2]
-        earth_position      = positions[1, :, :2]
-        mars_position       = positions[2, :, :2]
 
         if plotting:
+            positions = get_positions(kepler_ephemeris, start_time, arrival_time)
+
+            spacecraft_position = positions[0, :, :2]
+            earth_position = positions[1, :, :2]
+            mars_position = positions[2, :, :2]
+
             if not lines:
                 plt.grid()
                 lines.append(plt.plot(*spacecraft_position.T, rasterized=True, label='Spacecraft')[0])
