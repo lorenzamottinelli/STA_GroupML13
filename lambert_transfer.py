@@ -116,10 +116,13 @@ if __name__ == "__main__":
 
         if plotting:
             if not lines:
+                plt.grid()
                 lines.append(plt.plot(*spacecraft_position.T, rasterized=True, label='Spacecraft')[0])
                 lines.append(plt.plot(*earth_position.T, rasterized=True, label='Earth')[0])
                 lines.append(plt.plot(*mars_position.T, rasterized=True, label='Mars')[0])
 
+                plt.ylim((-1.8 * constants.ASTRONOMICAL_UNIT, 1.8 * constants.ASTRONOMICAL_UNIT))
+                plt.xlim((-1.8 * constants.ASTRONOMICAL_UNIT, 1.8 * constants.ASTRONOMICAL_UNIT))
                 plt.legend()
 
                 plt.pause(0.5)
