@@ -17,6 +17,8 @@ t_steps = 10
 t_range = np.linspace(t_start,t_end,t_steps)
 seq = np.array([np.sin(2*np.pi*t/10) for t in t_range])
 [print(num) for num in enumerate(seq)]
+x_test = np.array(seq)
+y_test = np.array(np.roll(seq, -1))
 #In order to create training data for predicting the next value of the sine function based on the current value,
 #generate n pairs of two-point sequences from the values in seq.
 n_training_data_pairs = 100
@@ -26,8 +28,7 @@ for i in range(n_training_data_pairs):
     rand = np.random.randint(t_steps)
     x_train = np.append(x_train, seq[rand])
     y_train = np.append(y_train, seq[np.mod(rand + 1,t_steps)])
-x_test = np.array(seq)
-y_test = np.array(np.roll(seq, -1))
+
 pdata = pd.DataFrame({'x':x_train,'y':y_train})
 print(pdata)
 
@@ -99,5 +100,15 @@ error = y_pred - y_test
 plt.hist(error, bins = 25, color='xkcd:blue')
 plt.xlabel("Prediction Error")
 _ = plt.ylabel("Count")
+plt.show()
+
+#Save the results on the test set for later comparison.
+test_results = {}
+test_results['ANN_1lay_model'] = model.evaluate(
+    np.asarray(x_test),
+    np.asarray(y_test),
+    verbose=0)
+
+pd.DataFrame(test_results,index = ['mse','accuracy']).transpose()
 
 # Normalize
