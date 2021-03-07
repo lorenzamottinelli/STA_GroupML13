@@ -23,18 +23,19 @@ np.set_printoptions(precision=4, suppress=True)
 JULIAN_DAY = 86400.0
 launch_window22 = 8304.5 * JULIAN_DAY
 
-departure_range = np.array([-25, 24]) * JULIAN_DAY + launch_window22
-arrival_range = np.array([-25 + 60, 24 + 449]) * JULIAN_DAY + launch_window22
+departure_range = np.array([-25 * JULIAN_DAY, 25 * (JULIAN_DAY - 1)]) + launch_window22
+arrival_range = np.array([(-25 + 60) * JULIAN_DAY, (25 + 450) * (JULIAN_DAY - 1)]) + launch_window22
 time_of_flight_range = arrival_range - departure_range
 
 raw_data = np.loadtxt('Output.txt', skiprows=1, delimiter=',')
-time_of_flight = raw_data[:, 1] - raw_data[:, 0]
 
-raw_data = np.vstack((raw_data[:, 0], time_of_flight, raw_data[:, 1], raw_data[:, 2], raw_data[:, 3])).T
-
-
-column_names = ['Departure time [s]', 'Time of flight [s]', 'Arrival time [s]', '∆V_1 [m/s]', '∆V_2 [m/s]']
+column_names = ['departure time', 'arrival time', '∆V_1', '∆V_2']
 raw_dataset = pd.DataFrame(data=raw_data, columns=column_names)
+
+column_names.insert(1, "time of flight")
+raw_dataset['time of flight'] = raw_dataset["arrival time"] - raw_dataset["departure time"]
+
+raw_dataset = raw_dataset[column_names]
 
 
 def do_run(sample_size, batch_size, n_nodes, n_layers):

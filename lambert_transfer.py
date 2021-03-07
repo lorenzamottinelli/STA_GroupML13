@@ -122,8 +122,8 @@ if __name__ == "__main__":
         # Randomize departure and arrival times. A randomly picked deviation of 25 days from the september 2022 launch
         # window is taken as the departure time and the arrival time is randomly taken, as 60 days as a minimum and
         # 450 days as a maximum after departure time
-        start_time = launch_window22 + np.random.randint(-25, 25) * constants.JULIAN_DAY
-        arrival_time = start_time + np.random.randint(60, 450) * constants.JULIAN_DAY
+        start_time = launch_window22 + np.random.randint(-25 * constants.JULIAN_DAY, 25 * constants.JULIAN_DAY)
+        arrival_time = start_time + np.random.randint(60 * constants.JULIAN_DAY, 450 * constants.JULIAN_DAY)
 
         # Get the Kepler ephemeris, delta V1 and delta V2
         kepler_ephemeris, delta_v1, delta_v2 = do_lambert(start_time, arrival_time)
@@ -141,17 +141,22 @@ if __name__ == "__main__":
             #mars_position_3d = positions[2, :, :3]
 
             if not lines:
-                plt.grid()
-                lines.append(plt.plot(*spacecraft_position.T, rasterized=True, label='Spacecraft')[0])
-                lines.append(plt.plot(*earth_position.T, rasterized=True, label='Earth')[0])
-                lines.append(plt.plot(*mars_position.T, rasterized=True, label='Mars')[0])
+                fig, ax = plt.subplots(1, 1, figsize=(4.25, 3))
 
-                plt.ylim((-1.8 * constants.ASTRONOMICAL_UNIT, 1.8 * constants.ASTRONOMICAL_UNIT))
-                plt.xlim((-1.8 * constants.ASTRONOMICAL_UNIT, 1.8 * constants.ASTRONOMICAL_UNIT))
-                plt.xlabel("x [m]", fontsize = 20)
-                plt.ylabel("y [m]", fontsize = 20)
-                plt.tick_params(axis='both', which='major', labelsize=20)
-                plt.legend(prop={"size": 16})
+                ax.grid()
+                lines.append(ax.plot(*spacecraft_position.T / constants.ASTRONOMICAL_UNIT, '-', label='Transfer')[0])
+                lines.append(ax.plot(*earth_position.T / constants.ASTRONOMICAL_UNIT, '-.', label='Earth')[0])
+                lines.append(ax.plot(*mars_position.T / constants.ASTRONOMICAL_UNIT, ':', label='Mars')[0])
+
+                ax.set_aspect(1)
+                ax.set_ylim((-1.8, 1.8))
+                ax.set_xlim((-1.8, 1.8))
+                ax.set_xlabel("x [AU]")
+                ax.set_ylabel("y [AU]")
+                ax.tick_params(axis='both', which='major')
+                fig.legend(bbox_to_anchor=(1.0, 1.0), loc='upper right', frameon=False, ncol=1)
+                fig.tight_layout()
+                fig.subplots_adjust(left=0, bottom=0.194, right=0.87, top=0.95)
 
                 """# To plot in 3D (only works for 1 orbit so far :( )
                 from mpl_toolkits import mplot3d
@@ -166,14 +171,14 @@ if __name__ == "__main__":
                 plt.legend(prop={"size": 16})
                 """
 
-                plt.pause(5)
+                plt.pause(0.005)
 
             else:
-                lines[0].set_data(*spacecraft_position.T)
-                lines[1].set_data(*earth_position.T)
-                lines[2].set_data(*mars_position.T)
+                lines[0].set_data(*spacecraft_position.T / constants.ASTRONOMICAL_UNIT)
+                lines[1].set_data(*earth_position.T / constants.ASTRONOMICAL_UNIT)
+                lines[2].set_data(*mars_position.T / constants.ASTRONOMICAL_UNIT)
 
-                plt.pause(5)
+                plt.pause(0.005)
 
         #print(start_time, arrival_time, delta_v1, delta_v2)
 
